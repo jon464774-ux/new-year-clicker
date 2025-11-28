@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Новогодний Кликер + Праздник</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: linear-gradient(to bottom, #ffe6e6, #ffcccc);
+    padding: 20px;
+    margin: 0;
+    overflow-x: hidden;
+  }
+  #score {
+    font-size: 36px;
+    margin: 20px;
+  }
+  #clickBtn {
+    font-size: 28px;
+    padding: 30px 60px;
+    background-color: #ff6666;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: transform 0.1s, box-shadow 0.3s;
+  }
+  #clickBtn:hover {
+    box-shadow: 0 0 20px #ff9999, 0 0 40px #ff6666;
+  }
+  .menu-btn {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    color: white;
+  }
+  #leaderboard {
+    display: none;
+    background-color: #66ccff;
+    border: 2px solid #3399ff;
+    border-radius: 10px;
+    text-align: left;
+    padding: 10px;
+    margin-top: 20px;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  #bonus, #ad {
+    display: none;
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.5s;
+  }
+  #bonus {
+    background-color: #66ff66; border: 2px solid #33cc33;
+    transform: translateY(-20px); opacity: 0;
+    animation: glow 1s ease-in-out infinite alternate;
+  }
+  #ad {
+    background-color: #ffe066; border: 2px solid #ffcc00;
+    opacity: 0;
+  }
+
+  /* Снежинки */
+  .snowflake {
+    position: fixed;
+    top: -50px;
+    color: white;
+    font-size: 1em;
+    z-index: 1000;
+    user-select: none;
+    pointer-events: none;
+    animation: fall linear infinite;
+  }
+  @keyframes fall {
+    0% { transform: translateY(0) translateX(0); opacity: 1; }
+    100% { transform: translateY(100vh) translateX(50px); opacity: 0; }
+  }
+  @keyframes glow {
+    0% { box-shadow: 0 0 5px #66ff66; }
+    100% { box-shadow: 0 0 20px #33cc33; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🎄 Новогодний Кликер 🎄</h1>
+<p>Нажимай кнопку и набирай очки!</p>
+
+<div id="score">Очки: 0</div>
+<button id="clickBtn">Клик!</button>
+
+<div>
+  <button class="menu-btn" id="showLeadersBtn" style="background-color:#3399ff;">Таблица лидеров</button>
+  <button class="menu-btn" id="resetBtn" style="background-color:#ff3333;">Сбросить очки</button>
+  <button class="menu-btn" id="soundBtn" style="background-color:#33cc33;">Звук: Вкл</button>
+</div>
+
+<!-- AdSense -->
+<div id="ad">
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-2347839528740554"
+       data-ad-slot="8444427804"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+</div>
+
+<div id="bonus">✨ Бонус! +5 очков ✨</div>
+
+<div id="leaderboard">
+  <h3>Таблица лидеров</h3>
+  <ol id="leaderList"></ol>
+</div>
+
+<!-- Звуки -->
+<audio id="clickSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+<audio id="bonusSound" src="https://www.soundjay.com/button/sounds/button-10.mp3"></audio>
+
+<script>
+let score = parseInt(localStorage.getItem('score')) || 0;
+let adShown = false;
+let soundOn = true;
+const maxLeaders = 5;
+
+const scoreDiv = document.getElementById('score');
+const clickBtn = document.getElementById('clickBtn');
+const adDiv = document.getElementById('ad');
+const bonusDiv = document.getElementById('bonus');
+const leaderboardDiv = document.getElementById('leaderboard');
+const leaderList = document.getElementById('leaderList');
+const showLeadersBtn = document.getElementById('showLeadersBtn');
+const resetBtn = document.getElementById('resetBtn');
+const soundBtn = document.getElementById('soundBtn');
+
+const clickSound = document.getElementById('clickSound');
+const bonusSound = document.getElementById('bonusSound');
+
+scoreDiv.textContent = 'Очки: ' + score;
+
+// Снежинки
+function createSnowflake() {
+    const snowflake = document.createElement('div');
+    snowflake.classList.add('snowflake');
+    snowflake.textContent = '❄';
+    snowflake.style.left = Math.random() * window.innerWidth + 'px';
+    snowflake.style.fontSize = Math.random() * 24 + 12 + 'px';
+    snowflake.style.animationDuration = (Math.random() * 5 + 5) + 's';
+    document.body.appendChild(snowflake);
+    setTimeout(() => { snowflake.remove(); }, 10000);
+}
+setInterval(createSnowflake, 300);
+
+// Обновление таблицы лидеров
+function updateLeaderboard() {
+    let leaders = JSON.parse(localStorage.getItem('leaders')) || [];
+    leaders.push(score);
+    leaders.sort((a,b)=>b-a);
+    leaders = leaders.slice(0,maxLeaders);
+    localStorage.setItem('leaders', JSON.stringify(leaders));
+    
+    leaderList.innerHTML = '';
+    leaders.forEach((s)=>{ leaderList.innerHTML += `<li>${s} очков</li>`; });
+}
+
+// Клик по кнопке с анимацией
+clickBtn.addEventListener('click', () => {
+    clickBtn.style.transform = 'scale(1.2)';
+    setTimeout(()=>{ clickBtn.style.transform = 'scale(1)'; }, 100);
+
+    score++;
+    scoreDiv.textContent = 'Очки: ' + score;
+    localStorage.setItem('score', score);
+
+    if(soundOn) clickSound.play();
+
+    // Реклама каждые 10 очков
+    if(score % 10 === 0 && !adShown){
+        adDiv.style.display = 'block';
+        adDiv.style.opacity = 0;
+        setTimeout(()=>{ adDiv.style.opacity = 1; }, 50);
+        adShown = true;
+        setTimeout(()=>{
+            adDiv.style.opacity = 0;
+            setTimeout(()=>{ adDiv.style.display='none'; adShown=false; }, 500);
+        }, 5000);
+    }
+
+    // Бонус каждые 15 очков
+    if(score % 15 === 0){
+        bonusDiv.style.display = 'block';
+        bonusDiv.style.transform = 'translateY(-30px)';
+        bonusDiv.style.opacity = 1;
+        score += 5;
+        scoreDiv.textContent = 'Очки: ' + score;
+        localStorage.setItem('score', score);
+        if(soundOn) bonusSound.play();
+        setTimeout(()=>{
+            bonusDiv.style.transform = 'translateY(-50px)';
+            bonusDiv.style.opacity = 0;
+            setTimeout(()=>{ bonusDiv.style.display='none'; }, 500);
+        }, 1500);
+    }
+});
+
+// Показ/скрытие таблицы лидеров
+showLeadersBtn.addEventListener('click', () => {
+    updateLeaderboard();
+    if(leaderboardDiv.style.display === 'none'){
+        leaderboardDiv.style.display = 'block';
+        setTimeout(()=>{ leaderboardDiv.style.opacity = 1; },50);
+    } else {
+        leaderboardDiv.style.opacity = 0;
+        setTimeout(()=>{ leaderboardDiv.style.display='none'; },500);
+    }
+});
+
+// Сброс очков
+resetBtn.addEventListener('click', () => {
+    score = 0;
+    scoreDiv.textContent = 'Очки: ' + score;
+    localStorage.setItem('score', score);
+});
+
+// Вкл/выкл звук
+soundBtn.addEventListener('click', () => {
+    soundOn = !soundOn;
+    soundBtn.textContent = `Звук: ${soundOn ? 'Вкл' : 'Выкл'}`;
+});
+</script>
+
+<!-- AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+
+</body>
+</html>
